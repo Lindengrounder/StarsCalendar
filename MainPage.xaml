@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StarsCalendar.MainPage"
+             Title="Звёздный календарь">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="15" Padding="10">
+
+            <!-- Шапка с навигацией по месяцам -->
+            <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                <Button Text="◀" x:Name="PrevMonthBtn" Clicked="OnPrevMonthClicked" />
+                <Label x:Name="MonthYearLabel" FontSize="20" VerticalTextAlignment="Center" />
+                <Button Text="▶" x:Name="NextMonthBtn" Clicked="OnNextMonthClicked" />
+            </HorizontalStackLayout>
+
+            <!-- Сетка календаря: дни недели + ячейки -->
+            <Grid x:Name="CalendarGrid" RowSpacing="1" ColumnSpacing="1">
+                <!-- Заголовки дней недели будут добавлены в коде -->
+            </Grid>
+
+            <!-- Кнопка добавления звезды за сегодня -->
+            <Button x:Name="AddStarBtn" Text="⭐ Добавить звезду за сегодня" 
+                    Clicked="OnAddStarClicked" 
+                    HorizontalOptions="Center" />
+
+            <!-- Информационный Label (опционально) -->
+            <Label x:Name="InfoLabel" Text="Нажмите на день, чтобы увидеть звёзды" 
+                   HorizontalOptions="Center" FontSize="14" TextColor="Gray" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

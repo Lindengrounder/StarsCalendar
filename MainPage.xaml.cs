@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.IO;
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.Maui.Storage;
 
@@ -263,7 +264,41 @@ namespace StarsCalendar
             AddOneStar(DateTime.Today);
             InfoLabel.Text = $"⭐ +1 к сегодня: стало {_stars.GetValueOrDefault(DateTime.Today.Date, 0)} звёзд";
         }
+        private async void OnExportClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                // 1. Формируем CSV-строку
+                var csvBuilder = new System.Text.StringBuilder();
+                csvBuilder.AppendLine("Date,Stars"); // Заголовки
 
+                // Для непрерывного графика лучше выгружать все даты месяца (даже с нулями)
+                var startDate = new DateTime(_currentMonth.Year, _currentMonth.Month, 1);
+                var daysInMonth = DateTime.DaysInMonth(_currentMonth.Year, _currentMonth.Month);
+                for (int day = 1; day <= daysInMonth; day++)
+                {
+                    var date = startDate.AddDays(day - 1);
+                    _stars.TryGetValue(date, out int stars);
+                    csvBuilder.AppendLine($"{date:yyyy-MM-dd},{stars}");
+                }
+
+                // 2. Сохраняем файл (например, в папку "Загрузки")
+                var fileName = $"Stars_{_currentMonth:yyyy_MM}.csv";
+                var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
+                File.WriteAllText(filePath, csvBuilder.ToString());
+
+                // 3. Предлагаем пользователю сохранить/открыть файл
+                await Share.Default.RequestAsync(new ShareFileRequest
+                {
+                    Title = "Сохранить CSV",
+                    File = new ShareFile(filePath)
+                });
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("Ошибка", $"Не удалось экспортировать: {ex.Message}", "OK");
+            }
+        }
         private void OnSubtractOneTodayClicked(object sender, EventArgs e)
         {
             SubtractOneStar(DateTime.Today);

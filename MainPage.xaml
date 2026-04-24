@@ -31,6 +31,7 @@
                     HorizontalOptions="Center" /-->
             <Button Text="+1 сегодня" Clicked="OnAddOneTodayClicked" />
             <Button Text="-1 сегодня" Clicked="OnSubtractOneTodayClicked" />
+            <Button Text="📊 Экспорт в Excel (CSV)" Clicked="OnExportClicked" HorizontalOptions="Center" />
 
             <!-- Информационный Label (опционально) -->
             <Label x:Name="InfoLabel" Text="Нажмите на день, чтобы увидеть звёзды" 

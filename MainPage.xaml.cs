@@ -17,6 +17,7 @@ namespace StarsCalendar
             LoadStars();          // загружаем сохранённые звёзды
             BuildCalendar();      // строим сетку календаря
             UpdateMonthLabel();   // обновляем заголовок месяца
+            UpdateTotalStarsForMonth(); //общее колличество в месяце
         }
 
         // ------------------ Работа с хранилищем ------------------
@@ -52,6 +53,7 @@ namespace StarsCalendar
 
             SaveStars();
             RefreshCalendar();
+            UpdateTotalStarsForMonth();
         }
 
         private void AddOneStar(DateTime date)
@@ -220,6 +222,19 @@ namespace StarsCalendar
             }
         }
 
+        // ------------------ Подсчёт звёзд за месяц ------------------
+        private void UpdateTotalStarsForMonth()
+        {
+            int total = 0;
+            int daysInMonth = DateTime.DaysInMonth(_currentMonth.Year, _currentMonth.Month);
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                DateTime date = new DateTime(_currentMonth.Year, _currentMonth.Month, day);
+                if (_stars.TryGetValue(date, out int count))
+                    total += count;
+            }
+            TotalStarsLabel.Text = $"⭐ Всего звёзд за месяц: {total}";
+        }
         // ------------------ Навигация по месяцам ------------------
         private void UpdateMonthLabel()
         {
@@ -231,6 +246,7 @@ namespace StarsCalendar
             _currentMonth = _currentMonth.AddMonths(-1);
             UpdateMonthLabel();
             BuildCalendar();
+            UpdateTotalStarsForMonth();
         }
 
         private void OnNextMonthClicked(object sender, EventArgs e)
@@ -238,6 +254,7 @@ namespace StarsCalendar
             _currentMonth = _currentMonth.AddMonths(1);
             UpdateMonthLabel();
             BuildCalendar();
+            UpdateTotalStarsForMonth();
         }
 
         // ------------------ Кнопки для быстрого изменения звёзд за сегодня ------------------

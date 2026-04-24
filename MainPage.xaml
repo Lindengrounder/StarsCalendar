@@ -13,7 +13,13 @@
                 <Label x:Name="MonthYearLabel" FontSize="20" VerticalTextAlignment="Center" />
                 <Button Text="▶" x:Name="NextMonthBtn" Clicked="OnNextMonthClicked" />
             </HorizontalStackLayout>
-
+            
+            <Label x:Name="TotalStarsLabel" 
+                   FontSize="16" 
+                   HorizontalOptions="Center" 
+                   Margin="0,5" 
+                   Text="⭐ Всего звёзд за месяц: 0" />
+            
             <!-- Сетка календаря: дни недели + ячейки -->
             <Grid x:Name="CalendarGrid" RowSpacing="1" ColumnSpacing="1">
                 <!-- Заголовки дней недели будут добавлены в коде -->

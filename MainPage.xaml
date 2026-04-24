@@ -20,9 +20,11 @@
             </Grid>
 
             <!-- Кнопка добавления звезды за сегодня -->
-            <Button x:Name="AddStarBtn" Text="⭐ Добавить звезду за сегодня" 
+            <!--Button x:Name="AddStarBtn" Text="⭐ Добавить звезду за сегодня" 
                     Clicked="OnAddStarClicked" 
-                    HorizontalOptions="Center" />
+                    HorizontalOptions="Center" /-->
+            <Button Text="+1 сегодня" Clicked="OnAddOneTodayClicked" />
+            <Button Text="-1 сегодня" Clicked="OnSubtractOneTodayClicked" />
 
             <!-- Информационный Label (опционально) -->
             <Label x:Name="InfoLabel" Text="Нажмите на день, чтобы увидеть звёзды" 

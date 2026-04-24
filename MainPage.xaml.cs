@@ -41,18 +41,54 @@ namespace StarsCalendar
             Preferences.Set("stars_data", json);
         }
 
-        // ------------------ Логика добавления звёзд ------------------
-        private void AddStarForDate(DateTime date)
+        // ------------------ Логика изменения звёзд ------------------
+        private void SetStarsForDate(DateTime date, int newCount)
         {
-            // Приводим дату к началу дня (без времени)
             var key = date.Date;
-            if (_stars.ContainsKey(key))
-                _stars[key]++;
+            if (newCount <= 0)
+                _stars.Remove(key);
             else
-                _stars[key] = 1;
+                _stars[key] = newCount;
 
             SaveStars();
-            RefreshCalendar();    // обновляем отображение звёзд в календаре
+            RefreshCalendar();
+        }
+
+        private void AddOneStar(DateTime date)
+        {
+            var key = date.Date;
+            int current = _stars.ContainsKey(key) ? _stars[key] : 0;
+            SetStarsForDate(date, current + 1);
+        }
+
+        private void SubtractOneStar(DateTime date)
+        {
+            var key = date.Date;
+            int current = _stars.ContainsKey(key) ? _stars[key] : 0;
+            if (current > 0)
+                SetStarsForDate(date, current - 1);
+        }
+
+        private async Task ChangeStarsViaDialog(DateTime date)
+        {
+            var key = date.Date;
+            int current = _stars.ContainsKey(key) ? _stars[key] : 0;
+            string result = await DisplayPromptAsync(
+                "Количество звёзд",
+                $"Введите количество звёзд для {date:dd.MM.yyyy}:",
+                initialValue: current.ToString(),
+                keyboard: Keyboard.Numeric
+            );
+
+            if (int.TryParse(result, out int newCount) && newCount >= 0)
+            {
+                SetStarsForDate(date, newCount);
+                InfoLabel.Text = $"⭐ {date:dd.MM.yyyy}: теперь {newCount} звёзд";
+            }
+            else if (result != null)
+            {
+                await DisplayAlert("Ошибка", "Введите целое неотрицательное число", "OK");
+            }
         }
 
         // ------------------ Построение календаря ------------------
@@ -69,7 +105,6 @@ namespace StarsCalendar
 
             // Заголовки дней недели
             string[] dayNames = CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames;
-            // Переупорядочим, если неделя начинается с понедельника (CultureInfo может начинать с воскресенья)
             int firstDayOfWeek = (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek;
             for (int col = 0; col < 7; col++)
             {
@@ -86,12 +121,9 @@ namespace StarsCalendar
                 CalendarGrid.Children.Add(header);
             }
 
-            // Определяем количество строк (заголовок + до 6 недель)
-            CalendarGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // строка заголовков
+            CalendarGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-            // Получаем первый день месяца
             DateTime firstDayOfMonth = new DateTime(_currentMonth.Year, _currentMonth.Month, 1);
-            // Смещение до первого дня в сетке (0 = понедельник, 6 = воскресенье)
             int offset = (7 + (firstDayOfMonth.DayOfWeek - CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek)) % 7;
 
             DateTime currentDate = firstDayOfMonth.AddDays(-offset);
@@ -99,31 +131,27 @@ namespace StarsCalendar
 
             while (currentDate.Month <= _currentMonth.Month || currentDate.DayOfWeek != CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek)
             {
-                // Добавляем новую строку, если нужно
                 if (CalendarGrid.RowDefinitions.Count <= row)
                     CalendarGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
                 for (int col = 0; col < 7; col++)
                 {
-                    // Создаём ячейку для даты
                     var dayBox = CreateDayCell(currentDate);
                     Grid.SetRow(dayBox, row);
                     Grid.SetColumn(dayBox, col);
                     CalendarGrid.Children.Add(dayBox);
-
                     currentDate = currentDate.AddDays(1);
                 }
                 row++;
             }
         }
 
-        // Создаёт визуальный элемент для одного дня (Frame с датой и звёздами)
+        // Создаёт ячейку для одного дня (число месяца + количество звёзд числом)
         private Frame CreateDayCell(DateTime date)
         {
             bool isCurrentMonth = date.Month == _currentMonth.Month;
             int starCount = _stars.ContainsKey(date.Date) ? _stars[date.Date] : 0;
 
-            // Содержимое ячейки: вертикальный стек с числом и звёздами
             var stack = new VerticalStackLayout
             {
                 Spacing = 2,
@@ -140,28 +168,16 @@ namespace StarsCalendar
             };
             stack.Children.Add(dayLabel);
 
-            // Отображение звёздочек (⭐ повторяется starCount раз, или текст с количеством)
-            if (starCount > 0)
+            // Количество звёзд (всегда число)
+            var starsLabel = new Label
             {
-                var starsLabel = new Label
-                {
-                    Text = new string('⭐', Math.Min(starCount, 5)) + (starCount > 5 ? $" +{starCount - 5}" : ""),
-                    FontSize = 12,
-                    HorizontalOptions = LayoutOptions.Center
-                };
-                stack.Children.Add(starsLabel);
-            }
-            else
-            {
-                var emptyLabel = new Label
-                {
-                    Text = " ",
-                    FontSize = 12
-                };
-                stack.Children.Add(emptyLabel);
-            }
+                Text = starCount > 0 ? $"⭐ {starCount}" : "0",
+                FontSize = 14,
+                HorizontalOptions = LayoutOptions.Center,
+                TextColor = Colors.Goldenrod
+            };
+            stack.Children.Add(starsLabel);
 
-            // Оформление ячейки
             var frame = new Frame
             {
                 Content = stack,
@@ -171,19 +187,18 @@ namespace StarsCalendar
                 BackgroundColor = (date.Date == DateTime.Today) ? Colors.LightYellow : Colors.White
             };
 
-            // При клике на ячейку можно показать информацию (опционально)
+            // Клик по ячейке — меняем звёзды через диалог
             var tapGesture = new TapGestureRecognizer();
-            tapGesture.Tapped += (s, e) => InfoLabel.Text = $"{date:dd.MM.yyyy}: {starCount} звёзд";
+            tapGesture.Tapped += async (s, e) => await ChangeStarsViaDialog(date);
             frame.GestureRecognizers.Add(tapGesture);
 
             return frame;
         }
 
-        // Обновляет только содержимое ячеек (без перестроения всей сетки)
+        // Обновляет содержимое ячеек без полной перестройки
         private void RefreshCalendar()
         {
-            // Перебираем все дочерние элементы CalendarGrid, начиная с индекса 7 (первые 7 — заголовки)
-            int childIndex = 7; // первые 7 элементов — заголовки дней
+            int childIndex = 7; // первые 7 — заголовки
             DateTime firstDayOfMonth = new DateTime(_currentMonth.Year, _currentMonth.Month, 1);
             int offset = (7 + (firstDayOfMonth.DayOfWeek - CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek)) % 7;
             DateTime currentDate = firstDayOfMonth.AddDays(-offset);
@@ -192,16 +207,12 @@ namespace StarsCalendar
             {
                 if (CalendarGrid.Children[childIndex] is Frame frame && frame.Content is VerticalStackLayout stack)
                 {
-                    // Обновляем звёздочки
                     int starCount = _stars.ContainsKey(currentDate.Date) ? _stars[currentDate.Date] : 0;
                     if (stack.Children.Count >= 2 && stack.Children[1] is Label starsLabel)
                     {
-                        starsLabel.Text = starCount > 0
-                            ? new string('⭐', Math.Min(starCount, 5)) + (starCount > 5 ? $" +{starCount - 5}" : "")
-                            : " ";
+                        starsLabel.Text = starCount > 0 ? $"⭐ {starCount}" : "0";
                     }
 
-                    // Обновляем цвет фона для сегодняшнего дня
                     frame.BackgroundColor = (currentDate.Date == DateTime.Today) ? Colors.LightYellow : Colors.White;
                 }
                 currentDate = currentDate.AddDays(1);
@@ -219,7 +230,7 @@ namespace StarsCalendar
         {
             _currentMonth = _currentMonth.AddMonths(-1);
             UpdateMonthLabel();
-            BuildCalendar(); // перестраиваем сетку для нового месяца
+            BuildCalendar();
         }
 
         private void OnNextMonthClicked(object sender, EventArgs e)
@@ -229,11 +240,17 @@ namespace StarsCalendar
             BuildCalendar();
         }
 
-        // ------------------ Обработчик кнопки "Добавить звезду за сегодня" ------------------
-        private void OnAddStarClicked(object sender, EventArgs e)
+        // ------------------ Кнопки для быстрого изменения звёзд за сегодня ------------------
+        private void OnAddOneTodayClicked(object sender, EventArgs e)
         {
-            AddStarForDate(DateTime.Today);
-            InfoLabel.Text = $"⭐ Добавлена звезда за {DateTime.Today:dd.MM.yyyy}";
+            AddOneStar(DateTime.Today);
+            InfoLabel.Text = $"⭐ +1 к сегодня: стало {_stars.GetValueOrDefault(DateTime.Today.Date, 0)} звёзд";
+        }
+
+        private void OnSubtractOneTodayClicked(object sender, EventArgs e)
+        {
+            SubtractOneStar(DateTime.Today);
+            InfoLabel.Text = $"⭐ -1 от сегодня: стало {_stars.GetValueOrDefault(DateTime.Today.Date, 0)} звёзд";
         }
     }
 }
